@@ -3,40 +3,39 @@ import pandas as pd
 import ta
 
 def get_data():
-    symbol = "^BSESN"
-    df = yf.download(tickers=symbol, interval='5m', period='5d')
-
-    if df.empty or 'Close' not in df.columns:
-        raise ValueError("Downloaded data is empty or missing 'Close' column.")
-
-    # ✅ Make sure 'Close' is a Series, not a 2D array
-    close_series = pd.Series(df['Close'].values.flatten(), index=df.index)
-
-    # Calculate indicators
-    df['EMA20'] = ta.trend.EMAIndicator(close=close_series, window=20).ema_indicator()
-    df['RSI'] = ta.momentum.RSIIndicator(close=close_series, window=14).rsi()
+    ticker = "^BSESN"
+    df = yf.download(ticker, interval="5m", period="1d")
+    df.dropna(inplace=True)
+    df = df[['Close']]
+    df['EMA20'] = ta.trend.EMAIndicator(close=df['Close'], window=20).ema_indicator()
+    df['RSI'] = ta.momentum.RSIIndicator(close=df['Close'], window=14).rsi()
+    macd = ta.trend.MACD(close=df['Close'])
+    df['MACD'] = macd.macd()
+    df['MACD_signal'] = macd.macd_signal()
+    df['MACD_hist'] = macd.macd_diff()
 
     df.dropna(inplace=True)
+    df['Signal'] = df.apply(lambda row: determine_signal(row), axis=1)
     return df
 
-def generate_signal(df):
-    # Use only the latest values (last row)
-    rsi = df['RSI'].iloc[-1]
-    close = df['Close'].iloc[-1]
-    ema20 = df['EMA20'].iloc[-1]
+def determine_signal(row):
+    rsi = row['RSI']
+    close = row['Close']
+    ema = row['EMA20']
+    macd = row['MACD']
+    macd_signal = row['MACD_signal']
 
-    if rsi < 30 and close > ema20:
-        signal = "Buy Call"
-    elif rsi > 70 and close < ema20:
-        signal = "Sell Call"
-    elif rsi < 30 and close < ema20:
-        signal = "Buy Put"
-    elif rsi > 70 and close > ema20:
-        signal = "Sell Put"
+    if rsi < 30 and close > ema and macd > macd_signal:
+        return "Buy Call"
+    elif rsi > 70 and close < ema and macd < macd_signal:
+        return "Sell Call"
+    elif rsi > 70 and close > ema and macd < macd_signal:
+        return "Buy Put"
+    elif rsi < 30 and close < ema and macd > macd_signal:
+        return "Sell Put"
     else:
-        signal = "Hold"
+        return "Hold"
 
-    df['Signal'] = "Hold"
-    df.at[df.index[-1], 'Signal'] = signal
-
-    return signal, df
+def generate_latest_signal(df):
+    latest_row = df.iloc[-1]
+    return latest_row['Signal'], latest_row
