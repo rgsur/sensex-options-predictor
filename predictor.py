@@ -3,49 +3,40 @@ import pandas as pd
 import ta
 
 def get_data():
-    # Download Sensex data - 1 hour interval for last 30 days
-    df = yf.download("^BSESN", interval="1h", period="30d", progress=False)
+    symbol = "^BSESN"
+    df = yf.download(tickers=symbol, interval='5m', period='5d')
 
     if df.empty or 'Close' not in df.columns:
-        raise ValueError("Data fetch failed or 'Close' column missing")
+        raise ValueError("Downloaded data is empty or missing 'Close' column.")
 
-    # Ensure 'Close' is a 1D Series
-    close_series = df['Close'].squeeze()
+    # ✅ Make sure 'Close' is a Series, not a 2D array
+    close_series = pd.Series(df['Close'].values.flatten(), index=df.index)
 
-    # Technical indicators
-    ema20 = ta.trend.EMAIndicator(close=close_series, window=20).ema_indicator()
-    rsi14 = ta.momentum.RSIIndicator(close=close_series, window=14).rsi()
+    # Calculate indicators
+    df['EMA20'] = ta.trend.EMAIndicator(close=close_series, window=20).ema_indicator()
+    df['RSI'] = ta.momentum.RSIIndicator(close=close_series, window=14).rsi()
 
-    # Add indicators to the DataFrame
-    df['EMA20'] = ema20
-    df['RSI'] = rsi14
-
-    # Drop rows with NaN values (caused by indicator warm-up period)
     df.dropna(inplace=True)
-
     return df
 
 def generate_signal(df):
-    """
-    Signal strategy:
-    - BUY: Close > EMA20 and RSI < 70
-    - SELL: Close < EMA20 and RSI > 30
-    - HOLD: Otherwise
-    """
-    # Make sure we're working with the last row
-    latest = df.iloc[-1]
+    # Use only the latest values (last row)
+    rsi = df['RSI'].iloc[-1]
+    close = df['Close'].iloc[-1]
+    ema20 = df['EMA20'].iloc[-1]
 
-    # Extract actual values (scalars) from the latest row
-    close = float(latest['Close'])
-    ema20 = float(latest['EMA20'])
-    rsi = float(latest['RSI'])
-
-    if close > ema20 and rsi < 70:
-        signal = "BUY"
-    elif close < ema20 and rsi > 30:
-        signal = "SELL"
+    if rsi < 30 and close > ema20:
+        signal = "Buy Call"
+    elif rsi > 70 and close < ema20:
+        signal = "Sell Call"
+    elif rsi < 30 and close < ema20:
+        signal = "Buy Put"
+    elif rsi > 70 and close > ema20:
+        signal = "Sell Put"
     else:
-        signal = "HOLD"
+        signal = "Hold"
 
-    return signal, latest
+    df['Signal'] = "Hold"
+    df.at[df.index[-1], 'Signal'] = signal
 
+    return signal, df

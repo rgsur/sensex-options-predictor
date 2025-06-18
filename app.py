@@ -1,38 +1,29 @@
 import streamlit as st
-import matplotlib.pyplot as plt
 from predictor import get_data, generate_signal
 from backtest import backtest
+import time
 
 st.set_page_config(page_title="Sensex Options Predictor", layout="wide")
 
-st.title("📈 Sensex Options Trading Predictor")
-st.markdown("Real-time predictor with RSI + EMA. Updated every 15 minutes.")
+st.title("📈 Sensex Options Price Movement Predictor (5-minute)")
 
-# Fetch Data
 df = get_data()
-signal, latest = generate_signal(df)
+latest_signal, latest = generate_signal(df)
 
-# Live Signal
-st.subheader("📊 Current Signal")
-st.success(signal)
-st.write("Latest Close:", round(latest['Close'], 2))
-st.write("RSI:", round(latest['RSI'], 2))
-st.write("EMA20:", round(latest['EMA20'], 2))
+st.title("Sensex Options Price Movement Predictor - 5 Min")
 
-# Chart
-st.subheader("📉 Price Chart with EMA20")
-fig, ax = plt.subplots(figsize=(12, 5))
-df['Close'].plot(ax=ax, label="Close")
-df['EMA20'].plot(ax=ax, label="EMA20", color='orange')
-ax.set_ylabel("Price")
-ax.legend()
-st.pyplot(fig)
+st.metric(label="Signal", value=latest_signal)
+st.dataframe(df[['Close', 'EMA20', 'RSI', 'Signal']].tail(10), height=250)
 
-# Backtest Results
-st.subheader("🧪 Backtest (Last 60 Days)")
-results = backtest(df)
-for action, time, price in results[-5:]:
-    st.write(f"{time} → {action} @ {round(price, 2)}")
+row = latest.iloc[0]
 
-# Auto Refresh every 15 minutes
-st.rerun()  # Add timer in deployment to trigger rerun
+st.write(
+    f"**Price:** ₹{row['Close'].values[0]:.2f} | "
+    f"**RSI:** {row['RSI'].values[0]:.2f} | "
+    f"**EMA20:** {row['EMA20'].values[0]:.2f}"
+)
+
+
+
+# Optional: refresh every X seconds in deployment
+# st.experimental_rerun()  # not needed unless auto refresh is desired
