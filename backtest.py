@@ -1,26 +1,12 @@
-def backtest(df):
-    signals = []
-    position = None
-    results = []
+import backtrader as bt
 
-    for i, row in df.iterrows():
-        rsi = float(row['RSI'])
-        close = float(row['Close'])
-        ema20 = float(row['EMA20'])
+class MACDStrategy(bt.Strategy):
+    def __init__(self):
+        self.macd = bt.indicators.MACD()
+        self.cross = bt.indicators.CrossOver(self.macd.macd, self.macd.signal)
 
-        if rsi < 30 and close > ema20:
-            signal = 'BUY CALL'
-        elif rsi > 70 and close < ema20:
-            signal = 'SELL CALL'
-        elif rsi > 70 and close > ema20:
-            signal = 'SELL PUT'
-        elif rsi < 30 and close < ema20:
-            signal = 'BUY PUT'
-        else:
-            signal = 'HOLD'
-
-        signals.append(signal)
-        results.append((signal, i, close))
-
-    df['Signal'] = signals
-    return results
+    def next(self):
+        if self.cross > 0:
+            self.buy()
+        elif self.cross < 0:
+            self.sell()

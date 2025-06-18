@@ -1,42 +1,54 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 from predictor import get_data, generate_signal
 
-st.set_page_config(page_title="Sensex Options Predictor", layout="wide")
+st.set_page_config(page_title="Sensex Options Signal App", layout="wide")
 
 st.title("📈 Sensex Options Price Movement Predictor")
-st.markdown("Predicts **Buy Call**, **Sell Call**, **Buy Put**, **Sell Put**, or **Hold** based on EMA, RSI, and MACD indicators.")
+st.markdown("Get live Buy/Sell/Hold signals based on EMA, RSI, MACD, and ATR volatility filter.")
 
 try:
     df = get_data()
-    signal = generate_signal(df)
-    latest_price = df['Close'].iloc[-1]
-    st.subheader(f"🔔 Latest Signal: **{signal}**")
-    st.write(f"Latest Price: ₹{latest_price:.2f}")
+    signal, reason = generate_signal(df)
+    latest = df.iloc[-1]
 
-    # Color coding signal
-    signal_colors = {
+    # Color logic
+    color_map = {
         "Buy Call": "green",
-        "Sell Call": "red",
         "Buy Put": "blue",
+        "Sell Call": "red",
         "Sell Put": "orange",
         "Hold": "gray"
     }
-    st.markdown(f"<h3 style='color:{signal_colors.get(signal, 'black')}'>{signal}</h3>", unsafe_allow_html=True)
+    st.subheader(f"💡 Signal: **:{color_map.get(signal, 'gray')}[{signal}]**")
+    st.caption(f"Reason: {reason}")
+    st.caption(f"Last Updated: {latest.name.strftime('%Y-%m-%d %H:%M:%S')}")
 
-    # Plot
-    fig, ax = plt.subplots(figsize=(12, 6))
-    ax.plot(df['Datetime'], df['Close'], label='Close Price', color='black')
-    ax.plot(df['Datetime'], df['EMA20'], label='EMA20', linestyle='--', color='blue')
-    ax.set_title("Sensex Price with EMA20")
-    ax.set_xlabel("Datetime")
-    ax.set_ylabel("Price (₹)")
-    ax.legend()
-    ax.grid(True)
+    # Chart
+    fig = go.Figure()
 
-    st.pyplot(fig)
+    fig.add_trace(go.Candlestick(
+        x=df.index,
+        open=df['Open'],
+        high=df['High'],
+        low=df['Low'],
+        close=df['Close'],
+        name="Price"
+    ))
+
+    fig.add_trace(go.Scatter(
+        x=df.index, y=df['EMA20'], mode='lines', name='EMA20', line=dict(color='blue')
+    ))
+    fig.add_trace(go.Scatter(
+        x=df.index, y=df['MACD'], name='MACD', line=dict(color='green', dash='dot')
+    ))
+    fig.add_trace(go.Scatter(
+        x=df.index, y=df['MACD_signal'], name='MACD Signal', line=dict(color='red', dash='dot')
+    ))
+
+    fig.update_layout(title="Sensex 5-min Chart with Indicators", xaxis_rangeslider_visible=False)
+    st.plotly_chart(fig, use_container_width=True)
 
 except Exception as e:
-    st.error(f"⚠️ Error: {e}")
-    st.stop()
+    st.error(f"⚠️ Could not load data: {e}")
