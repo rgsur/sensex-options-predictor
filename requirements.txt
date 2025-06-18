@@ -3,3 +3,7 @@ yfinance
 pandas
 plotly
 ta
+streamlit
+numpy
+matplotlib
+
