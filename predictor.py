@@ -3,7 +3,7 @@ import ta
 import pandas as pd
 
 def get_data():
-    df = yf.download("^BSESN", interval="15m", period="60d", progress=False)
+    df = yf.download("^BSESN", interval="1h", period="30d", progress=False)
 
     if df.empty or 'Close' not in df.columns:
         raise ValueError("Failed to fetch Sensex data or 'Close' column missing.")
