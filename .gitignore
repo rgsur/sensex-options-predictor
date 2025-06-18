@@ -1,4 +1,1 @@
-__pycache__/
-*.pyc
-.env
-.DS_Store
+__pycache__/\n*.pyc\n.env\n.streamlit/
