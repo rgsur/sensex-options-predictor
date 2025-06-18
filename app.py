@@ -12,13 +12,6 @@ st.markdown("Real-time predictor with RSI + EMA. Updated every 15 minutes.")
 df = get_data()
 signal, latest = generate_signal(df)
 
-try:
-    df = get_data()
-    signal, latest = generate_signal(df)
-except Exception as e:
-    st.error(f"Failed to load data or calculate indicators.\n\n{e}")
-    st.stop()
-
 # Live Signal
 st.subheader("📊 Current Signal")
 st.success(signal)

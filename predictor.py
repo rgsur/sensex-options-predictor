@@ -3,14 +3,12 @@ import ta
 import pandas as pd
 
 def get_data():
-    df = yf.download("^BSESN", interval="1h", period="30d", progress=False)
-
-    if df.empty or 'Close' not in df.columns:
-        raise ValueError("Failed to fetch Sensex data or 'Close' column missing.")
-
+    df = yf.download("^BSESN", interval="15m", period="60d")
+    df.dropna(inplace=True)
+    
+    # Technical indicators
     df['EMA20'] = ta.trend.EMAIndicator(close=df['Close'], window=20).ema_indicator()
     df['RSI'] = ta.momentum.RSIIndicator(close=df['Close'], window=14).rsi()
-    
     df.dropna(inplace=True)
     
     return df
