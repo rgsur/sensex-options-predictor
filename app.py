@@ -23,7 +23,27 @@ st.write(
     f"**EMA20:** {row['EMA20'].values[0]:.2f}"
 )
 
+import streamlit as st
+import time
+from datetime import datetime
 
+# Show last updated time
+now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+st.markdown(f"🕒 **Last updated:** {now}")
 
-# Optional: refresh every X seconds in deployment
-# st.experimental_rerun()  # not needed unless auto refresh is desired
+# Refresh control
+REFRESH_INTERVAL = 300  # 5 minutes
+countdown = st.empty()
+
+# Manual refresh button
+if st.button("🔄 Refresh Now"):
+    st.experimental_rerun()
+
+# Countdown loop
+for seconds_left in range(REFRESH_INTERVAL, 0, -1):
+    mins, secs = divmod(seconds_left, 60)
+    countdown.markdown(f"⏳ Auto-refresh in **{mins:02d}:{secs:02d}**", unsafe_allow_html=True)
+    time.sleep(1)
+
+# Auto rerun
+st.experimental_rerun()
