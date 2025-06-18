@@ -1,23 +1,51 @@
 import yfinance as yf
-import ta
 import pandas as pd
+import ta
 
 def get_data():
-    df = yf.download("^BSESN", interval="15m", period="60d")
-    df.dropna(inplace=True)
-    
+    # Download Sensex data - 1 hour interval for last 30 days
+    df = yf.download("^BSESN", interval="1h", period="30d", progress=False)
+
+    if df.empty or 'Close' not in df.columns:
+        raise ValueError("Data fetch failed or 'Close' column missing")
+
+    # Ensure 'Close' is a 1D Series
+    close_series = df['Close'].squeeze()
+
     # Technical indicators
-    df['EMA20'] = ta.trend.EMAIndicator(close=df['Close'], window=20).ema_indicator()
-    df['RSI'] = ta.momentum.RSIIndicator(close=df['Close'], window=14).rsi()
+    ema20 = ta.trend.EMAIndicator(close=close_series, window=20).ema_indicator()
+    rsi14 = ta.momentum.RSIIndicator(close=close_series, window=14).rsi()
+
+    # Add indicators to the DataFrame
+    df['EMA20'] = ema20
+    df['RSI'] = rsi14
+
+    # Drop rows with NaN values (caused by indicator warm-up period)
     df.dropna(inplace=True)
-    
+
     return df
 
 def generate_signal(df):
+    """
+    Signal strategy:
+    - BUY: Close > EMA20 and RSI < 70
+    - SELL: Close < EMA20 and RSI > 30
+    - HOLD: Otherwise
+    """
+    # Make sure we're working with the last row
     latest = df.iloc[-1]
-    if latest['RSI'] < 30 and latest['Close'] > latest['EMA20']:
-        return "📈 BUY CALL (Uptrend)", latest
-    elif latest['RSI'] > 70 and latest['Close'] < latest['EMA20']:
-        return "📉 BUY PUT (Downtrend)", latest
+
+    # Extract actual values (scalars) from the latest row
+    close = float(latest['Close'])
+    ema20 = float(latest['EMA20'])
+    rsi = float(latest['RSI'])
+
+    if close > ema20 and rsi < 70:
+        signal = "BUY"
+    elif close < ema20 and rsi > 30:
+        signal = "SELL"
     else:
-        return "⏸️ HOLD (No strong signal)", latest
+        signal = "HOLD"
+
+    return signal, latest
+

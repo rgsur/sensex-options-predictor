@@ -35,4 +35,4 @@ for action, time, price in results[-5:]:
     st.write(f"{time} → {action} @ {round(price, 2)}")
 
 # Auto Refresh every 15 minutes
-st.experimental_rerun()  # Add timer in deployment to trigger rerun
+st.rerun()  # Add timer in deployment to trigger rerun
